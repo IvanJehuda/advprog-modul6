@@ -5,6 +5,7 @@
 * [Milestone 2: Returning HTML Reflection](#milestone-2-returning-html-reflection)
 * [Milestone 3: Validating request and selectively responding Reflection](#milestone-3-validating-request-and-selectively-responding-reflection)
 * [Milestone 4: Simulation slow response Reflection](#Milestone-4-Simulation-slow-response-Reflection)
+* [Milestone 5:  Multithreaded Server Reflection](#Milestone-5-Multithreaded-Server-Reflection)
 
 # Milestone 1: Single-threaded Web Server Reflection
 
@@ -220,3 +221,41 @@ Despite these improvements, the server still has several drawbacks:
 - Minimal error handling (`unwrap()` is used without safeguards).
 - Lacks advanced request handling (e.g., headers, query parameters, POST support).  
 
+## Milestone 5: Multithreaded Server Reflection
+
+In this milestone, the server has been upgraded to support multithreading using a thread pool. This enhancement resolves the performance bottlenecks of the previous single-threaded implementation, enabling concurrent request handling.
+
+### Thread Pool Implementation
+
+The thread pool consists of a fixed number of worker threads that process incoming connections in parallel. When initialized with `ThreadPool::new(4)`, four independent worker threads are created and remain active throughout the server's runtime.
+
+### How It Works:
+- The main thread listens for incoming connections and distributes tasks using an MPSC (Multiple Producer, Single Consumer) channel.
+- Shared access to this channel is managed through Rust’s concurrency primitives: `Arc` (Atomic Reference Counter) and `Mutex` (Mutual Exclusion).
+- Each worker thread continuously polls for jobs, processes them, and returns to an idle state.
+- When a request arrives, it is wrapped as a closure and sent to the worker pool via the `execute()` method.
+
+### Performance Improvements
+
+With this multithreaded architecture, the server now:
+- Handles multiple client requests simultaneously (up to 4 connections in the current configuration).
+- Ensures that long-running requests (e.g., the `/sleep` endpoint) only occupy a single worker, allowing others to remain available.
+- Eliminates head-of-line blocking, a major drawback of single-threaded servers.
+- Maintains responsiveness even when handling time-intensive operations.
+
+### Key Enhancements
+
+At this stage, the server now:
+- Implements **true concurrent request handling** through a thread pool.
+- Maintains **existing request routing** but processes requests in parallel.
+- Uses **Rust’s concurrency features** to enable thread-safe communication.
+- Provides **debugging output** when a worker receives a job (`println!("Worker {id} got a job; executing.")`).
+
+### Implementation Details
+
+To enable multithreading, a new `lib.rs` file was created to implement the `ThreadPool` pattern. The main server code was modified to:
+- Instantiate a thread pool with 4 worker threads.
+- Submit incoming connections as jobs to the thread pool.
+- Process client requests concurrently instead of sequentially.
+
+This transition to a thread pool architecture significantly boosts server efficiency, ensuring smoother and faster request handling, even under high loads.  
