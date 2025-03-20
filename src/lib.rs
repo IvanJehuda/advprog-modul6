@@ -23,6 +23,20 @@ impl ThreadPool {
 
         ThreadPool { workers, sender }
     }
+    pub fn build(size: usize) -> Result<ThreadPool, PoolCreationError> {
+        if size == 0 {
+            return Err(PoolCreationError::ZeroSize);
+        }
+
+        let (sender, receiver) = mpsc::channel();
+        let receiver = Arc::new(Mutex::new(receiver));
+        let workers = (0..size)
+            .map(|id| Worker::new(id, Arc::clone(&receiver)))
+            .collect::<Vec<Worker>>();
+
+        Ok(ThreadPool { workers, sender })
+    }
+
 
     pub fn execute<F>(&self, f: F)
         where
@@ -36,6 +50,10 @@ impl ThreadPool {
 struct Worker {
     id: usize,
     thread: thread::JoinHandle<()>,
+}
+#[derive(Debug)]
+pub enum PoolCreationError {
+    ZeroSize,
 }
 
 impl Worker {

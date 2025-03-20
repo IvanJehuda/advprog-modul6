@@ -6,6 +6,7 @@
 * [Milestone 3: Validating request and selectively responding Reflection](#milestone-3-validating-request-and-selectively-responding-reflection)
 * [Milestone 4: Simulation slow response Reflection](#Milestone-4-Simulation-slow-response-Reflection)
 * [Milestone 5:  Multithreaded Server Reflection](#Milestone-5-Multithreaded-Server-Reflection)
+* [Bonus Milestone: Enhanced Error Handling in ThreadPool Reflection](#Bonus-Milestone-Reflection-Enhanced-Error-Handling-in-ThreadPool)
 
 # Milestone 1: Single-threaded Web Server Reflection
 
@@ -259,3 +260,77 @@ To enable multithreading, a new `lib.rs` file was created to implement the `Thre
 - Process client requests concurrently instead of sequentially.
 
 This transition to a thread pool architecture significantly boosts server efficiency, ensuring smoother and faster request handling, even under high loads.  
+
+## Bonus Milestone Reflection: Enhanced Error Handling in ThreadPool
+
+In this milestone, I've improved the thread pool implementation by introducing a `build` function as an alternative to the `new` constructor. This follows Rust’s best practices for error handling, giving callers greater flexibility when creating a thread pool.
+
+### Key Enhancements
+
+The primary improvement is the addition of the `build` function in the `ThreadPool` implementation:
+
+```rust
+pub fn build(size: usize) -> Result<ThreadPool, PoolCreationError> {  
+    if size == 0 {  
+        return Err(PoolCreationError::ZeroSize);  
+    }  
+
+    let (sender, receiver) = mpsc::channel();  
+    let receiver = Arc::new(Mutex::new(receiver));  
+    let workers = (0..size)  
+        .map(|id| Worker::new(id, Arc::clone(&receiver)))  
+        .collect::<Vec<Worker>>();  
+
+    Ok(ThreadPool { workers, sender })  
+}  
+```
+
+### Improvements Introduced
+
+1. **Result-Based Error Handling** – The function returns `Result<ThreadPool, PoolCreationError>` instead of directly constructing a `ThreadPool`, aligning with Rust’s conventions for operations that may fail.
+2. **Custom Error Type** – A dedicated `PoolCreationError` enum provides clear failure modes.
+3. **Graceful Error Handling** – Instead of panicking with `assert!`, the function returns an `Err` variant for invalid inputs.
+4. **Functional Construction** – The worker creation process is streamlined with `map` and `collect`, improving readability.
+
+### Integration with `main.rs`
+
+The `main.rs` file now calls `build`, allowing failure handling:
+
+```rust
+let pool = ThreadPool::build(4).expect("Failed to create ThreadPool!");
+```
+
+This example still uses `expect` for simplicity, but in production, more sophisticated error handling could be implemented.
+
+### Comparing `new` and `build`
+
+1. **`new` Function**
+    - Uses `assert!(size > 0)`, leading to a panic on failure.
+    - Follows Rust’s convention that constructors named `new` shouldn’t fail or return `Result`.
+    - Suitable when invalid inputs indicate a programming error.
+
+2. **`build` Function**
+    - Returns `Result<ThreadPool, PoolCreationError>` to explicitly indicate failure.
+    - Allows calling code to handle errors gracefully.
+    - More appropriate when failure is expected or recoverable.
+    - Enables structured error handling.
+
+### Custom Error Type
+
+```rust
+#[derive(Debug)]
+pub enum PoolCreationError {
+    ZeroSize,
+}
+```
+
+The `#[derive(Debug)]` attribute makes the error easily printable, aiding debugging.
+
+### Summary
+
+This enhancement makes the thread pool implementation more robust by:
+
+- Adopting Rust’s error-handling best practices using `Result`.
+- Providing a more flexible and recoverable thread pool creation method.
+- Introducing a custom error type for clearer diagnostics.
+- Maintaining all concurrency benefits from previous milestones.
