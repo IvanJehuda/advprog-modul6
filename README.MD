@@ -2,8 +2,9 @@
 
 ## Table of Contents
 * [Milestone 1: Single-threaded Web Server Reflection](#milestone-1-single-threaded-web-server-reflection)
+* [Milestone 2: Returning HTML Reflection](#milestone-2-returning-html-reflection)
 
-## Milestone 1: Single-threaded Web Server Reflection
+# Milestone 1: Single-threaded Web Server Reflection
 
 This is a simple single-threaded web server implemented in Rust. The web server consists of two main functions:
 
@@ -76,4 +77,20 @@ This function is responsible for reading and processing an incoming HTTP request
 - **Error Handling**: The code relies heavily on `unwrap()`, which isn't ideal for robustness. Proper error handling should be introduced.
 - **Request Parsing**: The server captures HTTP headers but does not process different request types or send responses yet.
 
+# Milestone 2: Returning HTML Reflection
+![Commit 2 screen capture](assets/images/ReturningHTML.png)
+
+At this stage, the `handle_connection()` function has been improved to generate a structured HTTP response, including a status line, headers, and HTML content. The server now properly responds to client requests by:
+
+- Setting the status line to **`HTTP/1.1 200 OK`** to indicate a successful response.
+- Adding a **`Content-Length`** header to specify the size of the response body.
+- Using two **CRLF sequences (`\r\n\r\n`)** to separate headers from the response body.
+- Serving **HTML content** retrieved from an external file.
+
+To achieve this, the server reads the contents of `hello.html` using `fs::read_to_string()` and transmits the complete response to the client through `stream.write_all()`.
+
+However, there are still some limitations:
+- The server always responds with **`200 OK`**, regardless of the request.
+- It only serves a **single static file (`hello.html`)**.
+- Connections are still processed **sequentially**, meaning the server remains **single-threaded**.
 
